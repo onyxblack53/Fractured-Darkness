@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#08070b">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="FRACTURED">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>FRACTURED: The Darkness — Prototype</title>
+<style>
+html,body,#game{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body{padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
+*{box-sizing:border-box}html,body{margin:0;height:100%;background:#08070b;color:#eee;font-family:system-ui,sans-serif;overflow:hidden}
+#game{width:100%;height:100%;position:relative;background:linear-gradient(#100d18,#08070b)}
+canvas{width:100%;height:100%;display:block;image-rendering:pixelated}
+#menu{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:radial-gradient(circle,#24182e,#08070b 70%);padding:20px}
+.panel{width:min(700px,94vw);max-height:92vh;overflow:auto;padding:28px;border:1px solid #6e527e;border-radius:18px;background:#100d15ee;box-shadow:0 0 60px #000}
+h1{margin:0 0 5px;font-size:34px;letter-spacing:4px}.sub{opacity:.7;margin-bottom:22px}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.choice{padding:13px;border:1px solid #44374d;border-radius:10px;background:#17121d;color:#eee;text-align:left}.choice.selected{border-color:#c89de3;background:#24182d}
+button{cursor:pointer;font:inherit}.start{margin-top:18px;width:100%;padding:15px;border:0;border-radius:10px;background:#eee;color:#100d15;font-weight:700}
+#hud{position:absolute;top:12px;left:12px;right:12px;display:none;pointer-events:none}.bar{height:14px;border:1px solid #75617d;background:#17121d;border-radius:10px;overflow:hidden;width:210px}.fill{height:100%;width:100%;background:#b75c76}.label{font-size:12px;margin:3px 0 4px}
+#controls{position:absolute;bottom:16px;left:16px;right:16px;display:none;justify-content:space-between;pointer-events:none}.pad,.actions{display:flex;gap:10px;pointer-events:auto}.ctrl{width:58px;height:58px;border-radius:50%;border:1px solid #75617d;background:#17121dcc;color:#fff;font-size:22px}.ctrl:active{transform:scale(.94)}
+#hint{position:absolute;bottom:92px;left:50%;transform:translateX(-50%);font-size:13px;opacity:.8;text-align:center;pointer-events:none}
+</style>
+</head>
+<body>
+<div id="game"><canvas id="c"></canvas></div>
+
+<div id="menu"><div class="panel">
+<h1>FRACTURED</h1><div class="sub">THE DARKNESS — PLAYABLE PROTOTYPE</div>
+<p>Choose your bloodline and class. This prototype begins your journey in the Shattered Kingdom.</p>
+<h3>Bloodline</h3><div id="races" class="grid"></div>
+<h3>Class</h3><div id="classes" class="grid"></div>
+<button class="start" id="start">BEGIN THE JOURNEY</button>
+</div></div>
+
+<div id="hud">
+<div id="name"></div><div class="label">VITALITY</div><div class="bar"><div id="hp" class="fill"></div></div>
+<div id="xptext" class="label">Level 1 · XP 0/100</div>
+</div>
+<div id="hint">Move with the arrows / WASD · Attack with ⚔ · Dodge with ◆</div>
+<div id="controls">
+<div class="pad"><button class="ctrl" data-k="left">←</button><button class="ctrl" data-k="right">→</button></div>
+<div class="actions"><button class="ctrl" data-k="jump">↑</button><button class="ctrl" data-k="attack">⚔</button><button class="ctrl" data-k="dodge">◆</button></div>
+</div>
+
+<script>
+const races=[
+["Human","Balanced","Adaptable"],
+["Orc","Brutal","High strength"],
+["Elf","Arcane","Fast casting"],
+["Dragonborn","Draconic","Breath attack"],
+["Demon","Infernal","Dark resistance"],
+["Angel","Celestial","Radiant power"],
+["Fallen Angel","Twilight","Light + dark"],
+["Tiefling","Hexborn","Curse affinity"],
+["Vampire","Bloodborn","Lifesteal"],
+["Werewolf","Feral","Transformation"]
+];
+const classes=[
+["Knight","Guard","Heavy melee"],
+["Mage","Arcana","Elemental magic"],
+["Witch","Hexes","Curses & summons"],
+["Samurai","Focus","Precision & counters"],
+["Ronin","Bleed","Aggressive mobility"],
+["Ninja","Shadow","Stealth & speed"]
+];
+let race="Human", cls="Knight";
+function makeChoices(id,data,cb){
+ const el=document.getElementById(id); el.innerHTML="";
+ data.forEach(x=>{let b=document.createElement("button");b.className="choice";b.innerHTML="<b>"+x[0]+"</b><br><small>"+x[1]+" · "+x[2]+"</small>";
+ b.onclick=()=>{cb(x[0]);[...el.children].forEach(z=>z.classList.remove("selected"));b.classList.add("selected")};el.appendChild(b)});
+ el.firstChild.classList.add("selected");
+}
+makeChoices("races",races,x=>race=x);makeChoices("classes",classes,x=>cls=x);
+
+const canvas=document.getElementById("c"),ctx=canvas.getContext("2d");
+let W,H,player,enemies=[],keys={},running=false,level=1,xp=0,last=0;
+function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight}addEventListener("resize",resize);resize();
+function startGame(){
+ document.getElementById("menu").style.display="none";document.getElementById("hud").style.display="block";document.getElementById("controls").style.display="flex";
+ document.getElementById("name").textContent=race+" "+cls;
+ player={x:W*.25,y:H*.62,vx:0,vy:0,hp:100,attack:0,dodge:0,onGround:true};
+ enemies=[
+ {x:W*.68,y:H*.63,hp:45,max:45,hit:0},
+ {x:W*.82,y:H*.55,hp:55,max:55,hit:0},
+ {x:W*.57,y:H*.48,hp:35,max:35,hit:0}
+ ];running=true;requestAnimationFrame(loop)
+}
+document.getElementById("start").onclick=startGame;
+addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
+document.querySelectorAll(".ctrl").forEach(b=>{let k=b.dataset.k;b.onpointerdown=()=>keys[k]=true;b.onpointerup=()=>keys[k]=false;b.onpointercancel=()=>keys[k]=false});
+
+function draw(){
+ ctx.clearRect(0,0,W,H);
+ // moon and fractured sky
+ ctx.fillStyle="#11101a";ctx.fillRect(0,0,W,H);
+ ctx.fillStyle="#30213c";ctx.beginPath();ctx.arc(W*.78,H*.18,55,0,Math.PI*2);ctx.fill();
+ ctx.strokeStyle="#695173";ctx.globalAlpha=.55;ctx.beginPath();ctx.moveTo(W*.15,0);ctx.lineTo(W*.25,H*.35);ctx.lineTo(W*.18,H*.65);ctx.lineTo(W*.34,H);ctx.stroke();ctx.globalAlpha=1;
+ // distant castle
+ ctx.fillStyle="#1b1720";ctx.fillRect(W*.06,H*.28,W*.88,H*.42);
+ for(let i=0;i<7;i++){let x=W*(.08+i*.14);ctx.fillRect(x,H*.18-(i%2)*35,55,H*.52)} 
+ ctx.fillStyle="#09080c";ctx.fillRect(0,H*.70,W,H*.30);
+ // floor
+ ctx.strokeStyle="#3a2e40";for(let x=0;x<W;x+=70){ctx.beginPath();ctx.moveTo(x,H*.70);ctx.lineTo(x+30,H);ctx.stroke()}
+ // player
+ ctx.save();ctx.translate(player.x,player.y);ctx.fillStyle="#c7a5d8";ctx.fillRect(-14,-45,28,45);ctx.fillStyle="#eee";ctx.fillRect(-10,-62,20,18);
+ ctx.fillStyle="#75617d";ctx.fillRect(-18,-5,12,8);ctx.fillRect(6,-5,12,8);
+ ctx.strokeStyle="#eee";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(13,-27);ctx.lineTo(42,-50);ctx.stroke();ctx.restore();
+ // enemies
+ enemies.forEach(e=>{if(e.hp<=0)return;ctx.fillStyle="#71394b";ctx.fillRect(e.x-16,e.y-40,32,40);ctx.fillStyle="#17121d";ctx.fillRect(e.x-22,e.y-51,44,5);ctx.fillStyle="#b75c76";ctx.fillRect(e.x-22,e.y-51,44*(e.hp/e.max),5)});
+}
+function attack(){
+ if(player.attack>0)return;player.attack=.28;
+ enemies.forEach(e=>{if(e.hp>0 && Math.hypot(e.x-player.x,e.y-player.y)<90){e.hp-=22;e.hit=.2;if(e.hp<=0){xp+=50;checkLevel()}}});
+}
+function checkLevel(){if(xp>=level*100){xp-=level*100;level++;player.hp=Math.min(100,player.hp+25)}}
+function loop(t){
+ if(!running)return;let dt=Math.min(.033,(t-last)/1000||.016);last=t;
+ let left=keys["a"]||keys["arrowleft"]||keys.left,right=keys["d"]||keys["arrowright"]||keys.right;
+ player.vx=(right-left)*230;if((keys["w"]||keys["arrowup"]||keys.jump)&&player.onGround){player.vy=-430;player.onGround=false;keys.jump=false}
+ if(keys[" "]||keys.attack){attack();keys.attack=false;keys[" "]=false}
+ if(keys["shift"]||keys.dodge){player.vx*=1.8;keys.dodge=false;keys.shift=false}
+ player.vy+=1000*dt;player.x+=player.vx*dt;player.y+=player.vy*dt;
+ if(player.y>H*.70){player.y=H*.70;player.vy=0;player.onGround=true}
+ player.x=Math.max(30,Math.min(W-30,player.x));
+ enemies.forEach(e=>{if(e.hp<=0)return;e.hit=Math.max(0,e.hit-dt);let dx=player.x-e.x;if(Math.abs(dx)<330)e.x+=Math.sign(dx)*45*dt;if(Math.abs(dx)<48&&e.hit<=0){player.hp-=8;e.hit=.8}});
+ document.getElementById("hp").style.width=Math.max(0,player.hp)+"%";document.getElementById("xptext").textContent=`Level ${level} · XP ${xp}/${level*100}`;
+ draw();if(player.hp<=0){running=false;setTimeout(()=>alert("The Darkness claims you... Restart the prototype to try again."),10)}requestAnimationFrame(loop)
+}
+</script>
+</body></html>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => navigator.serviceWorker.register("./sw.js"));
+}
+</script>
