@@ -27,7 +27,7 @@ button{cursor:pointer;font:inherit}.start{margin-top:18px;width:100%;padding:15p
 </style>
 </head>
 <body>
-<div id="game"><canvas id="c"></canvas></div>
+<div id="game"><canvas id="c"></canvas></div><div id="rotatePrompt" style="display:none;position:absolute;inset:0;z-index:99;background:#08070b;color:white;align-items:center;justify-content:center;text-align:center;padding:30px;font:600 22px system-ui">↻<br><br>Rotate your iPhone sideways to play FRACTURED.</div>
 
 <div id="menu"><div class="panel">
 <h1>FRACTURED</h1><div class="sub">THE DARKNESS — PLAYABLE PROTOTYPE</div>
@@ -79,7 +79,8 @@ makeChoices("races",races,x=>race=x);makeChoices("classes",classes,x=>cls=x);
 
 const canvas=document.getElementById("c"),ctx=canvas.getContext("2d");
 let W,H,player,enemies=[],keys={},running=false,level=1,xp=0,last=0;
-function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight}addEventListener("resize",resize);resize();
+function resize(){W=canvas.width=innerWidth;H=canvas.height=innerHeight;
+ let rp=document.getElementById("rotatePrompt"); if(rp) rp.style.display=(running&&H>W)?"flex":"none";}addEventListener("resize",resize);resize();
 function startGame(){
  document.getElementById("menu").style.display="none";document.getElementById("hud").style.display="block";document.getElementById("controls").style.display="flex";
  document.getElementById("name").textContent=race+" "+cls;
@@ -88,7 +89,7 @@ function startGame(){
  {x:W*.68,y:H*.63,hp:45,max:45,hit:0},
  {x:W*.82,y:H*.55,hp:55,max:55,hit:0},
  {x:W*.57,y:H*.48,hp:35,max:35,hit:0}
- ];running=true;requestAnimationFrame(loop)
+ ];running=true;resize();requestAnimationFrame(loop)
 }
 document.getElementById("start").onclick=startGame;
 addEventListener("keydown",e=>keys[e.key.toLowerCase()]=true);addEventListener("keyup",e=>keys[e.key.toLowerCase()]=false);
@@ -101,14 +102,17 @@ function draw(){
  ctx.fillStyle="#30213c";ctx.beginPath();ctx.arc(W*.78,H*.18,55,0,Math.PI*2);ctx.fill();
  ctx.strokeStyle="#695173";ctx.globalAlpha=.55;ctx.beginPath();ctx.moveTo(W*.15,0);ctx.lineTo(W*.25,H*.35);ctx.lineTo(W*.18,H*.65);ctx.lineTo(W*.34,H);ctx.stroke();ctx.globalAlpha=1;
  // distant castle
- ctx.fillStyle="#1b1720";ctx.fillRect(W*.06,H*.28,W*.88,H*.42);
+ ctx.fillStyle="#1b1720";
+ // Background wall now stops above the gameplay floor and cannot cover the player.
+ ctx.fillRect(W*.06,H*.28,W*.88,Math.max(0,H*.42));
  for(let i=0;i<7;i++){let x=W*(.08+i*.14);ctx.fillRect(x,H*.18-(i%2)*35,55,H*.52)} 
  ctx.fillStyle="#09080c";ctx.fillRect(0,H*.70,W,H*.30);
  // floor
  ctx.strokeStyle="#3a2e40";for(let x=0;x<W;x+=70){ctx.beginPath();ctx.moveTo(x,H*.70);ctx.lineTo(x+30,H);ctx.stroke()}
  // player
- ctx.save();ctx.translate(player.x,player.y);ctx.fillStyle="#c7a5d8";ctx.fillRect(-14,-45,28,45);ctx.fillStyle="#eee";ctx.fillRect(-10,-62,20,18);
- ctx.fillStyle="#75617d";ctx.fillRect(-18,-5,12,8);ctx.fillRect(6,-5,12,8);
+ ctx.save();ctx.translate(player.x,player.y);ctx.shadowColor="#c89de3";ctx.shadowBlur=12;
+ ctx.fillStyle="#c7a5d8";ctx.fillRect(-14,-45,28,45);ctx.fillStyle="#eee";ctx.fillRect(-10,-62,20,18);
+ ctx.fillStyle="#75617d";ctx.fillRect(-18,-5,12,8);ctx.fillRect(6,-5,12,8);ctx.shadowBlur=0;
  ctx.strokeStyle="#eee";ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(13,-27);ctx.lineTo(42,-50);ctx.stroke();ctx.restore();
  // enemies
  enemies.forEach(e=>{if(e.hp<=0)return;ctx.fillStyle="#71394b";ctx.fillRect(e.x-16,e.y-40,32,40);ctx.fillStyle="#17121d";ctx.fillRect(e.x-22,e.y-51,44,5);ctx.fillStyle="#b75c76";ctx.fillRect(e.x-22,e.y-51,44*(e.hp/e.max),5)});

@@ -1,14 +1,1 @@
-{
-  "name": "FRACTURED: The Darkness",
-  "short_name": "FRACTURED",
-  "start_url": "./index.html",
-  "display": "standalone",
-  "orientation": "landscape",
-  "background_color": "#08070b",
-  "theme_color": "#08070b",
-  "description": "A dark 2D fantasy action RPG prototype.",
-  "icons": [
-    {"src":"icon-180.png","sizes":"180x180","type":"image/png","purpose":"any maskable"},
-    {"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
-  ]
-}
+{"name":"FRACTURED: The Darkness","short_name":"FRACTURED","start_url":"./index.html","display":"standalone","orientation":"landscape","background_color":"#08070b","theme_color":"#08070b","icons":[{"src":"icon-180.png","sizes":"180x180","type":"image/png"},{"src":"icon-512.png","sizes":"512x512","type":"image/png"}]}
